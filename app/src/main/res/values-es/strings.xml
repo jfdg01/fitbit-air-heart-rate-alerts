@@ -42,7 +42,7 @@
     <string name="choose_device">Elegir dispositivo</string>
     <string name="searching_for_devices">Buscando dispositivos…</string>
     <string name="devices_not_found">No se encontraron dispositivos</string>
-    <string name="devices_not_found_hint">Asegúrate de llevar puesto el sensor y de que tenga suficiente batería.</string>
+    <string name="devices_not_found_hint">Ponte la pulsera. En Google Health, abre Fitbit Air y Compartir frecuencia cardiaca. Activa Siempre visible.</string>
     <string name="try_again">Reintentar</string>
     <string name="bluetooth_off">Bluetooth desactivado</string>
     <string name="bluetooth_off_hint">Activa el Bluetooth en tu dispositivo para continuar.</string>
@@ -69,4 +69,11 @@
     <string name="billing_nothing_to_restore">No se encontraron compras anteriores.</string>
     <string name="billing_unavailable">Google Play no está disponible en este momento.</string>
     <string name="billing_failed">Algo salió mal. Inténtalo de nuevo.</string>
+    <string name="connect_failed">No se pudo conectar</string>
+    <string name="open_google_health">Abrir Google Health</string>
+    <string name="before_search">Antes de buscar</string>
+    <string name="check_permission">Permiso de dispositivos cercanos</string>
+    <string name="check_bluetooth">Bluetooth activado</string>
+    <string name="allow_permission">Permitir</string>
+    <string name="turn_on_bluetooth">Activar Bluetooth</string>
 </resources>

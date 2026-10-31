@@ -1,4 +1,7 @@
 [versions]
+billing = "9.1.0"
+reviewKtx = "2.0.2"
+review = "2.0.2"
 agp = "8.11.0"
 datastorePreferences = "1.1.7"
 hiltAndroid = "2.56.2"
@@ -13,14 +16,11 @@ uiautomator = "2.3.0"
 lifecycleRuntimeKtx = "2.9.1"
 activityCompose = "1.10.1"
 composeBom = "2025.06.01"
-review = "2.0.2"
-reviewKtx = "2.0.2"
-rxjava = "3.1.11"
-rxandroid = "3.0.2"
-polar-ble-sdk = "6.16.0"
-billing = "9.1.0"
 
 [libraries]
+billing-ktx = { module = "com.android.billingclient:billing-ktx", version.ref = "billing" }
+review-ktx = { module = "com.google.android.play:review-ktx", version.ref = "reviewKtx" }
+review = { module = "com.google.android.play:review", version.ref = "review" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
@@ -33,6 +33,7 @@ androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-co
 androidx-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
 screengrab = { group = "tools.fastlane", name = "screengrab", version.ref = "screengrab" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-ui = { group = "androidx.compose.ui", name = "ui" }
@@ -42,12 +43,6 @@ androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
-review = { module = "com.google.android.play:review", version.ref = "review" }
-review-ktx = { module = "com.google.android.play:review-ktx", version.ref = "reviewKtx" }
-rxjava = { group = "io.reactivex.rxjava3", name = "rxjava", version.ref = "rxjava" }
-rxandroid = { group = "io.reactivex.rxjava3", name = "rxandroid", version.ref = "rxandroid" }
-polar-ble-sdk = { group = "com.github.polarofficial", name = "polar-ble-sdk", version.ref = "polar-ble-sdk" }
-billing-ktx = { module = "com.android.billingclient:billing-ktx", version.ref = "billing" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

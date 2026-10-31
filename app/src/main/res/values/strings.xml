@@ -44,7 +44,7 @@
     <string name="choose_device">Choose device</string>
     <string name="searching_for_devices">Searching for devices…</string>
     <string name="devices_not_found">Devices not found</string>
-    <string name="devices_not_found_hint">Make sure that you put it on and the battery level is good.</string>
+    <string name="devices_not_found_hint">Put on the band. In Google Health, open Fitbit Air, then Share heart rate. Turn on Always visible.</string>
     <string name="try_again">Try again</string>
     <string name="bluetooth_off">Bluetooth is off</string>
     <string name="bluetooth_off_hint">Please enable Bluetooth on your device to continue.</string>
@@ -71,4 +71,11 @@
     <string name="billing_nothing_to_restore">No previous purchase found.</string>
     <string name="billing_unavailable">Google Play is not available right now.</string>
     <string name="billing_failed">Something went wrong. Please try again.</string>
+    <string name="connect_failed">Could not connect</string>
+    <string name="open_google_health">Open Google Health</string>
+    <string name="before_search">Before the search</string>
+    <string name="check_permission">Nearby devices permission</string>
+    <string name="check_bluetooth">Bluetooth on</string>
+    <string name="allow_permission">Allow the permission</string>
+    <string name="turn_on_bluetooth">Turn on Bluetooth</string>
 </resources>

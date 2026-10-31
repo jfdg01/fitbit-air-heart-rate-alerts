@@ -6,7 +6,7 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
-val javaVersion = 24
+val javaVersion = 21
 
 val commitCount: Int = runCatching {
     "git rev-list --count HEAD".runCommand().trim().toInt() + 33
@@ -19,8 +19,8 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.nikashitsa.polar_alert_android"
-        minSdk = 26
+        applicationId = "com.nikashitsa.polar_alert_android.fitbit"
+        minSdk = 33
         targetSdk = 36
         versionCode = commitCount
         versionName = "3.1.1"
@@ -71,6 +71,7 @@ dependencies {
     implementation(composeBom)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
@@ -78,9 +79,6 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.datastore.preferences)
-    implementation(libs.rxjava)
-    implementation(libs.rxandroid)
-    implementation(libs.polar.ble.sdk)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -1,5 +1,15 @@
 package com.nikashitsa.polar_alert_android.ui.components
 
+import android.Manifest
+import android.bluetooth.BluetoothAdapter
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,15 +40,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.nikashitsa.polar_alert_android.R
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.nikashitsa.polar_alert_android.lib.BleDevice
 import com.nikashitsa.polar_alert_android.lib.BluetoothViewModel
 import com.nikashitsa.polar_alert_android.ui.theme.Colors
 import com.nikashitsa.polar_alert_android.ui.theme.Fonts
 import com.nikashitsa.polar_alert_android.ui.theme.HeartAlertTheme
-import com.polar.sdk.api.model.PolarDeviceInfo
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -48,7 +60,8 @@ import kotlin.time.Duration.Companion.milliseconds
 enum class DevicePickerState {
     Searching,
     Connecting,
-    NotFound
+    NotFound,
+    ConnectFailed
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -80,15 +93,33 @@ fun DevicePickerContent(
     sheetState: SheetState,
     onDismissRequest: () -> Unit = {},
     isBluetoothOn: Boolean,
-    foundDevices: List<PolarDeviceInfo>,
+    foundDevices: List<BleDevice>,
     searchForDevice: () -> Unit = {},
     stopDevicesSearch: () -> Unit = {},
-    connectToDevice: (PolarDeviceInfo, () -> Unit) -> Unit = { _, _ -> },
+    connectToDevice: (BleDevice, () -> Unit, () -> Unit) -> Unit = { _, _, _ -> },
     initialState: DevicePickerState = DevicePickerState.Searching,
 ) {
     var state by rememberSaveable { mutableStateOf(initialState) }
     var timeoutTask by remember { mutableStateOf<Job?>(null) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var permissionsGranted by remember { mutableStateOf(hasBluetoothPermissions(context)) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        permissionsGranted = hasBluetoothPermissions(context)
+        // Android shows no dialog after two refusals, so only the app settings page can help.
+        if (!permissionsGranted) {
+            context.startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+            )
+        }
+    }
+    val bluetoothLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
+    LifecycleResumeEffect(Unit) {
+        permissionsGranted = hasBluetoothPermissions(context)
+        onPauseOrDispose {}
+    }
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
@@ -101,7 +132,7 @@ fun DevicePickerContent(
                 .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (isBluetoothOn) {
+            if (permissionsGranted && isBluetoothOn) {
                 when (state) {
                     DevicePickerState.Searching -> {
                         if (foundDevices.isNotEmpty()) {
@@ -119,13 +150,17 @@ fun DevicePickerContent(
                                 foundDevices.forEach { device ->
                                     DeviceListItem(device.name) {
                                         state = DevicePickerState.Connecting
-                                        connectToDevice(device) {
-                                            scope.launch { sheetState.hide() }.invokeOnCompletion {
-                                                if (!sheetState.isVisible) {
-                                                    onDismissRequest()
+                                        connectToDevice(
+                                            device,
+                                            {
+                                                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                                    if (!sheetState.isVisible) {
+                                                        onDismissRequest()
+                                                    }
                                                 }
-                                            }
-                                        }
+                                            },
+                                            { state = DevicePickerState.ConnectFailed },
+                                        )
                                     }
                                 }
                             }
@@ -158,9 +193,11 @@ fun DevicePickerContent(
                         AppLoader(Modifier.weight(1f))
                     }
 
-                    DevicePickerState.NotFound -> {
+                    DevicePickerState.NotFound, DevicePickerState.ConnectFailed -> {
                         Text(
-                            text = stringResource(R.string.devices_not_found),
+                            text = stringResource(
+                                if (state == DevicePickerState.NotFound) R.string.devices_not_found else R.string.connect_failed
+                            ),
                             style = Fonts.textLgBold,
                         )
                         Column(
@@ -173,25 +210,38 @@ fun DevicePickerContent(
                                 style = Fonts.textMd,
                             )
                         }
-                        AppButton(stringResource(R.string.try_again)) {
-                            state = DevicePickerState.Searching
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AppButton(stringResource(R.string.open_google_health)) {
+                                context.packageManager.getLaunchIntentForPackage(GOOGLE_HEALTH_PACKAGE)
+                                    ?.let(context::startActivity)
+                            }
+                            AppButton(stringResource(R.string.try_again)) {
+                                state = DevicePickerState.Searching
+                            }
                         }
                     }
                 }
             } else {
                 Text(
-                    text = stringResource(R.string.bluetooth_off),
+                    text = stringResource(R.string.before_search),
                     style = Fonts.textLgBold,
                 )
                 Column(
                     modifier = Modifier
                         .weight(1f),
-                    verticalArrangement = Arrangement.Center,
+                    verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
                 ) {
-                    Text(
-                        text = stringResource(R.string.bluetooth_off_hint),
-                        style = Fonts.textMd,
-                    )
+                    CheckRow(permissionsGranted, R.string.check_permission)
+                    CheckRow(isBluetoothOn, R.string.check_bluetooth)
+                }
+                if (!permissionsGranted) {
+                    AppButton(stringResource(R.string.allow_permission)) {
+                        permissionLauncher.launch(BLUETOOTH_PERMISSIONS)
+                    }
+                } else {
+                    AppButton(stringResource(R.string.turn_on_bluetooth)) {
+                        bluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+                    }
                 }
             }
         }
@@ -202,6 +252,26 @@ fun DevicePickerContent(
             }
         }
     }
+}
+
+private const val GOOGLE_HEALTH_PACKAGE = "com.fitbit.FitbitMobile"
+
+private val BLUETOOTH_PERMISSIONS = arrayOf(
+    Manifest.permission.BLUETOOTH_SCAN,
+    Manifest.permission.BLUETOOTH_CONNECT,
+)
+
+private fun hasBluetoothPermissions(context: Context) = BLUETOOTH_PERMISSIONS.all {
+    context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED
+}
+
+@Composable
+private fun CheckRow(ok: Boolean, @StringRes label: Int) {
+    Text(
+        text = (if (ok) "✓  " else "✗  ") + stringResource(label),
+        style = Fonts.textMd,
+        color = if (ok) Colors.White else Colors.Red,
+    )
 }
 
 @Composable

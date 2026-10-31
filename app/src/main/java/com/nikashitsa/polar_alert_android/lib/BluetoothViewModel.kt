@@ -3,26 +3,15 @@ package com.nikashitsa.polar_alert_android.lib
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.polar.androidcommunications.api.ble.model.DisInfo
-import com.polar.sdk.api.PolarBleApi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
-import com.polar.sdk.api.PolarBleApiCallback
-import com.polar.sdk.api.errors.PolarInvalidArgument
-import com.polar.sdk.api.model.PolarDeviceInfo
-import com.polar.sdk.api.model.PolarHealthThermometerData
-import com.polar.sdk.api.model.PolarHrData
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
-import io.reactivex.rxjava3.disposables.Disposable
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.util.UUID
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.PI
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -30,14 +19,13 @@ import kotlin.random.Random
 
 @HiltViewModel
 class BluetoothViewModel @Inject constructor(
-    private val api: PolarBleApi
+    private val ble: HeartRateBle
 ): ViewModel() {
 
     private val tag = "BluetoothViewModel"
-    private val _isBluetoothOn = MutableStateFlow(false)
-    val isBluetoothOn = _isBluetoothOn.asStateFlow()
+    val isBluetoothOn = ble.isOn
 
-    private val _foundDevices = MutableStateFlow<List<PolarDeviceInfo>>(emptyList())
+    private val _foundDevices = MutableStateFlow<List<BleDevice>>(emptyList())
     val foundDevices = _foundDevices.asStateFlow()
 
     private val _deviceConnectionState = MutableStateFlow<DeviceConnectionState>(DeviceConnectionState.Disconnected())
@@ -52,8 +40,6 @@ class BluetoothViewModel @Inject constructor(
     private val _hrFeature = MutableStateFlow(HrFeature())
     val hrFeature = _hrFeature.asStateFlow()
 
-    private var scanDisposable: Disposable? = null
-    private var hrDisposable: Disposable? = null
     private var demoHrJob: Job? = null
 
     /** Unlocked from the Connect screen; adds the simulated strap to the device list. */
@@ -65,58 +51,29 @@ class BluetoothViewModel @Inject constructor(
         get() = (_deviceConnectionState.value as? DeviceConnectionState.Connected)?.address == DEMO_ADDRESS
 
     init {
-        api.setPolarFilter(false)
-        api.setApiCallback(object: PolarBleApiCallback() {
-
-            override fun blePowerStateChanged(powered: Boolean) {
-                Log.d(tag, "BLE power: $powered")
-                _isBluetoothOn.value = powered
-            }
-
-            override fun deviceConnected(polarDeviceInfo: PolarDeviceInfo) {
-                Log.d(tag, "CONNECTED: ${polarDeviceInfo.address}")
-                _deviceConnectionState.value = DeviceConnectionState.Connected(polarDeviceInfo.address)
-                _deviceName.value = polarDeviceInfo.name
-            }
-
-            override fun deviceConnecting(polarDeviceInfo: PolarDeviceInfo) {
-                Log.d(tag, "CONNECTING: ${polarDeviceInfo.address}")
-                _deviceConnectionState.value = DeviceConnectionState.Connecting(polarDeviceInfo.address)
-            }
-
-            override fun deviceDisconnected(polarDeviceInfo: PolarDeviceInfo) {
-                Log.d(tag, "DISCONNECTED: ${polarDeviceInfo.address}")
-                _deviceConnectionState.value = DeviceConnectionState.Disconnected(polarDeviceInfo.address)
-                _hrFeature.value = HrFeature()
-                _batteryStatusFeature.value = BatteryStatusFeature()
-            }
-
-            override fun bleSdkFeatureReady(identifier: String, feature: PolarBleApi.PolarBleSdkFeature) {
-                Log.d(tag, "Polar BLE SDK feature $feature is ready")
-                when (feature) {
-                    PolarBleApi.PolarBleSdkFeature.FEATURE_HR -> {
-                        _hrFeature.value = HrFeature(true)
-                    }
-                    PolarBleApi.PolarBleSdkFeature.FEATURE_BATTERY_INFO -> {
-                        _batteryStatusFeature.value = BatteryStatusFeature(true)
-                    }
-                    else -> {}
-                }
-            }
-
-            override fun disInformationReceived(identifier: String, disInfo: DisInfo) {}
-
-            override fun htsNotificationReceived(identifier: String, data: PolarHealthThermometerData) {}
-
-            override fun disInformationReceived(identifier: String, uuid: UUID, value: String) {
-                Log.d(tag, "DIS INFO uuid: $uuid value: $value")
-            }
-
-            override fun batteryLevelReceived(identifier: String, level: Int) {
-                Log.d(tag, "BATTERY LEVEL: $level")
-                _batteryStatusFeature.value = BatteryStatusFeature(true, level)
-            }
-        })
+        ble.onConnected = { device ->
+            Log.d(tag, "CONNECTED: ${device.address}")
+            _deviceName.value = device.name
+            _hrFeature.value = HrFeature(true)
+            _deviceConnectionState.value = DeviceConnectionState.Connected(device.address)
+        }
+        ble.onReconnecting = {
+            Log.d(tag, "RECONNECTING")
+            val address = _deviceConnectionState.value.address
+            _hrFeature.value = HrFeature()
+            _deviceConnectionState.value = DeviceConnectionState.Connecting(address)
+        }
+        ble.onNoHeartRateService = {
+            Log.d(tag, "NO HEART RATE SERVICE")
+            val address = _deviceConnectionState.value.address
+            _hrFeature.value = HrFeature()
+            _batteryStatusFeature.value = BatteryStatusFeature()
+            _deviceConnectionState.value = DeviceConnectionState.Disconnected(address)
+        }
+        ble.onBattery = { level ->
+            Log.d(tag, "BATTERY LEVEL: $level")
+            _batteryStatusFeature.value = BatteryStatusFeature(true, level)
+        }
     }
 
     fun searchForDevice() {
@@ -126,75 +83,49 @@ class BluetoothViewModel @Inject constructor(
             _foundDevices.value = listOf(DEMO_DEVICE)
             return
         }
-        val state = _deviceConnectionState.value
-        if (state is DeviceConnectionState.Connected) {
-            _foundDevices.value = listOf(
-                PolarDeviceInfo("", state.address, 0,_deviceName.value, true,)
-            )
+        _foundDevices.value = ble.bondedBands()
+        ble.scan { device ->
+            Log.d(tag, "found ${device.name} ${device.address}")
+            val currentList = _foundDevices.value
+            if (currentList.none { it.address == device.address }) {
+                _foundDevices.value = currentList + device
+            }
         }
-        scanDisposable = api.searchForDevice()
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(
-                { polarDeviceInfo: PolarDeviceInfo ->
-                    Log.d(tag, "found ${polarDeviceInfo.name} ${polarDeviceInfo.address}")
-                    val currentList = _foundDevices.value
-                    if (currentList.none { it.name == polarDeviceInfo.name }) {
-                        _foundDevices.value = (currentList + polarDeviceInfo).sortedByDescending { it.rssi }
-                    }
-                },
-                { error: Throwable ->
-                    Log.e(tag, "Device scan failed. Reason $error")
-                },
-                {
-                    Log.d(tag, "complete")
-                }
-            )
     }
 
     fun stopDevicesSearch() {
         Log.d(tag, "stopDevicesSearch")
-        scanDisposable?.dispose()
+        ble.stopScan()
         _foundDevices.value = emptyList()
     }
 
-    fun connectToDevice(device: PolarDeviceInfo, onComplete: () -> Unit) {
+    fun connectToDevice(device: BleDevice, onComplete: () -> Unit, onFailed: () -> Unit) {
         viewModelScope.launch {
-            try {
-                Log.d(tag, "connectToDevice")
-                if (_demoEnabled.value && device.address != DEMO_ADDRESS) {
-                    Log.w(tag, "Only the demo strap can connect in demo mode")
-                    return@launch
-                }
-
-                val state = _deviceConnectionState.value
-                if (state is DeviceConnectionState.Connected && state.address == device.address) {
-                    onComplete()
-                    return@launch
-                }
-
-                if (state is DeviceConnectionState.Connected) {
-                    api.disconnectFromDevice(state.address)
-                    _deviceConnectionState
-                        .filterIsInstance<DeviceConnectionState.Disconnected>()
-                        .filter { it.address == state.address }
-                        .first()
-                }
-
-                if (device.address == DEMO_ADDRESS) {
-                    startDemo()
-                    onComplete()
-                    return@launch
-                }
-
-                api.connectToDevice(device.address)
-
-                _deviceConnectionState
-                    .filterIsInstance<DeviceConnectionState.Connected>()
-                    .filter { it.address == device.address }
-                    .first()
+            Log.d(tag, "connectToDevice")
+            val state = _deviceConnectionState.value
+            if (state is DeviceConnectionState.Connected && state.address == device.address) {
                 onComplete()
-            } catch (polarInvalidArgument: PolarInvalidArgument) {
-                Log.e(tag, "Failed to connect. Reason $polarInvalidArgument ")
+                return@launch
+            }
+
+            if (device.address == DEMO_ADDRESS) {
+                startDemo()
+                onComplete()
+                return@launch
+            }
+
+            ble.stopScan()
+            _deviceConnectionState.value = DeviceConnectionState.Connecting(device.address)
+            ble.connect(device.address)
+            val result = withTimeoutOrNull(CONNECT_TIMEOUT_MS) {
+                _deviceConnectionState.first { it !is DeviceConnectionState.Connecting }
+            }
+            if (result is DeviceConnectionState.Connected) {
+                onComplete()
+            } else {
+                ble.disconnect()
+                _deviceConnectionState.value = DeviceConnectionState.Disconnected(device.address)
+                onFailed()
             }
         }
     }
@@ -204,24 +135,11 @@ class BluetoothViewModel @Inject constructor(
             demoHrStreamStart(onNext)
             return
         }
-        if (hrDisposable?.isDisposed == false) return
-        hrDisposable = api.startHrStreaming(address)
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(
-                { hrData: PolarHrData ->
-                    for (sample in hrData.samples) {
-                        onNext(sample.hr)
-                    }
-                },
-                { error: Throwable ->
-                    Log.e(tag, "HR stream failed. Reason $error")
-                },
-                { Log.d(tag, "HR stream complete") }
-            )
+        ble.startHeartRate(onNext)
     }
 
     fun hrStreamStop() {
-        hrDisposable?.dispose()
+        ble.stopHeartRate()
         demoHrJob?.cancel()
     }
 
@@ -229,7 +147,7 @@ class BluetoothViewModel @Inject constructor(
     fun enableDemo() {
         Log.d(tag, "enableDemo")
         _demoEnabled.value = true
-        scanDisposable?.dispose()
+        ble.stopScan()
         if (_foundDevices.value.isNotEmpty()) _foundDevices.value = listOf(DEMO_DEVICE)
     }
 
@@ -262,9 +180,9 @@ class BluetoothViewModel @Inject constructor(
     companion object {
         const val DEMO_ADDRESS = "demo"
         const val DEMO_DEVICE_NAME = "Heart Alert Demo"
+        private const val CONNECT_TIMEOUT_MS = 20_000L
         private const val DEMO_BATTERY_LEVEL = 80
-        // Lowest possible signal, so real straps sort above it.
-        private val DEMO_DEVICE = PolarDeviceInfo("", DEMO_ADDRESS, Int.MIN_VALUE, DEMO_DEVICE_NAME, true)
+        private val DEMO_DEVICE = BleDevice(DEMO_ADDRESS, DEMO_DEVICE_NAME)
         private const val DEMO_HR_PERIOD_MS = 120_000L
     }
 }
