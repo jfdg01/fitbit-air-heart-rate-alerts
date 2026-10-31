@@ -40,6 +40,9 @@ object SettingsOptions {
 
     const val HR_LOWEST = 30
     const val HR_HIGHEST = 240
+    val AGE = 10..100
+    val RESTING_HR = 25..120
+    val PEAK_HR = 100..HR_HIGHEST
 
     val ALERT_INTERVAL = listOf(1, 3, 5, 10)
     val OUT_OF_RANGE_FOR = listOf(0, 5, 10, 30, 60, 300, 600)
@@ -55,6 +58,12 @@ object SettingsKeys {
     val outOfRangeFor = intPreferencesKey("outOfRangeFor")
     val initialDelay = intPreferencesKey("initialDelay")
     val language = stringPreferencesKey("language")
+    val zone = intPreferencesKey("zone")
+    val age = intPreferencesKey("age")
+    val restingHr = intPreferencesKey("restingHr")
+    val healthRestingHr = intPreferencesKey("healthRestingHr")
+    val peakHr = intPreferencesKey("peakHr")
+    val measuredPeak = intPreferencesKey("measuredPeak")
 }
 
 @Singleton
@@ -84,6 +93,27 @@ class SettingsRepository @Inject constructor(
     val initialDelayFlow: Flow<Int> = get(SettingsKeys.initialDelay, SettingsDefaults.INITIAL_DELAY)
     suspend fun setInitialDelay(value: Int) = set(SettingsKeys.initialDelay, value)
 
+    /** The zone that sets Min and Max, or 0 when the user typed them. */
+    val zoneFlow: Flow<Int> = get(SettingsKeys.zone, 0)
+    suspend fun setZone(value: Int) = set(SettingsKeys.zone, value)
+
+    val ageFlow: Flow<Int?> = dataStore.data.map { prefs -> prefs[SettingsKeys.age] }
+    suspend fun setAge(value: Int?) = setOrRemove(SettingsKeys.age, value)
+
+    /** A typed value. It always wins over the value from Health Connect. */
+    val restingHrFlow: Flow<Int?> = dataStore.data.map { prefs -> prefs[SettingsKeys.restingHr] }
+    suspend fun setRestingHr(value: Int?) = setOrRemove(SettingsKeys.restingHr, value)
+
+    val healthRestingHrFlow: Flow<Int?> = dataStore.data.map { prefs -> prefs[SettingsKeys.healthRestingHr] }
+    suspend fun setHealthRestingHr(value: Int) = set(SettingsKeys.healthRestingHr, value)
+
+    /** A typed value. It always wins over the estimate from the age. */
+    val peakHrFlow: Flow<Int?> = dataStore.data.map { prefs -> prefs[SettingsKeys.peakHr] }
+    suspend fun setPeakHr(value: Int?) = setOrRemove(SettingsKeys.peakHr, value)
+
+    val measuredPeakFlow: Flow<Int?> = dataStore.data.map { prefs -> prefs[SettingsKeys.measuredPeak] }
+    suspend fun setMeasuredPeak(value: Int) = set(SettingsKeys.measuredPeak, value)
+
     /**
      * The language tag the user picked (see [AppLanguage]), or null to follow the device.
      * Nothing is stored until the user picks one, so a device language change still applies.
@@ -97,6 +127,10 @@ class SettingsRepository @Inject constructor(
      */
     private fun <T> get(key: Preferences.Key<T>, default: T): Flow<T> =
         dataStore.data.map { prefs -> prefs[key] ?: default }
+
+    private suspend fun setOrRemove(key: Preferences.Key<Int>, value: Int?) {
+        dataStore.edit { prefs -> if (value == null) prefs.remove(key) else prefs[key] = value }
+    }
 
     private suspend fun <T> set(key: Preferences.Key<T>, value: T) {
         dataStore.edit { prefs -> prefs[key] = value }

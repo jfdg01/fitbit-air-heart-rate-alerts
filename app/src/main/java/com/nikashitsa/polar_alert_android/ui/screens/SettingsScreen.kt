@@ -1,6 +1,15 @@
 package com.nikashitsa.polar_alert_android.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.health.connect.client.PermissionController
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.nikashitsa.polar_alert_android.lib.HealthData
+import com.nikashitsa.polar_alert_android.lib.HealthStatus
+import com.nikashitsa.polar_alert_android.lib.HeartZones
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -22,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeMute
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -63,6 +73,21 @@ fun SettingsScreen(
     val outOfRangeFor by settings.outOfRangeFor.collectAsState()
     val initialDelay by settings.initialDelay.collectAsState()
     val language by settings.language.collectAsState()
+    val zone by settings.zone.collectAsState()
+    val age by settings.age.collectAsState()
+    val restingHr by settings.restingHr.collectAsState()
+    val healthRestingHr by settings.healthRestingHr.collectAsState()
+    val peakHr by settings.peakHr.collectAsState()
+    val measuredPeak by settings.measuredPeak.collectAsState()
+    val healthStatus by settings.healthStatus.collectAsState()
+    val healthPermission = rememberLauncherForActivityResult(
+        PermissionController.createRequestPermissionResultContract()
+    ) { settings.refreshHealth() }
+
+    LifecycleResumeEffect(Unit) {
+        settings.refreshHealth()
+        onPauseOrDispose {}
+    }
 
     BackHandler {
         onBack()
@@ -85,6 +110,18 @@ fun SettingsScreen(
         setHrMin = settings::setHrMin,
         hrMax = hrMax,
         setHrMax = settings::setHrMax,
+        zone = zone,
+        setZone = settings::setZone,
+        age = age,
+        setAge = settings::setAge,
+        restingHr = restingHr,
+        setRestingHr = settings::setRestingHr,
+        healthRestingHr = healthRestingHr,
+        peakHr = peakHr,
+        setPeakHr = settings::setPeakHr,
+        measuredPeak = measuredPeak,
+        healthStatus = healthStatus,
+        askHealthPermission = { healthPermission.launch(HealthData.PERMISSIONS) },
         playSound = sound::play,
         language = language,
         setLanguage = settings::setLanguage,
@@ -111,6 +148,18 @@ fun SettingsScreenContent(
     setHrMin: (Int) -> Unit = {},
     hrMax: Int = SettingsDefaults.HR_MAX,
     setHrMax: (Int) -> Unit = {},
+    zone: Int = 0,
+    setZone: (Int) -> Unit = {},
+    age: Int? = null,
+    setAge: (Int?) -> Unit = {},
+    restingHr: Int? = null,
+    setRestingHr: (Int?) -> Unit = {},
+    healthRestingHr: Int? = null,
+    peakHr: Int? = null,
+    setPeakHr: (Int?) -> Unit = {},
+    measuredPeak: Int? = null,
+    healthStatus: HealthStatus = HealthStatus.UNAVAILABLE,
+    askHealthPermission: () -> Unit = {},
     playSound: (SoundType) -> Unit = {},
     language: AppLanguage = AppLanguage.DEFAULT,
     setLanguage: (AppLanguage) -> Unit = {},
@@ -118,6 +167,7 @@ fun SettingsScreenContent(
 ) {
     val scrollState = rememberScrollState()
     var showPicker by rememberSaveable { mutableStateOf(false) }
+    var showZonesHelp by rememberSaveable { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     Column(
@@ -131,6 +181,70 @@ fun SettingsScreenContent(
             Text(text = stringResource(R.string.settings), style = Fonts.textXlBold)
             Spacer(modifier = Modifier.weight(1f))
             LanguageSelector(value = language, setValue = setLanguage)
+        }
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        SettingSection(
+            title = stringResource(R.string.zones),
+            titleAction = {
+                IconButton(onClick = { showZonesHelp = true }) {
+                    Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = stringResource(R.string.zones_help))
+                }
+            },
+        ) {
+            val resting = restingHr ?: healthRestingHr
+            val peak = peakHr ?: age?.let(HeartZones::peakFromAge)
+            SettingRow(label = stringResource(R.string.age)) {
+                NumberField(age, SettingsOptions.AGE, setAge, clear = { setAge(null) })
+                Text(" " + stringResource(R.string.years))
+            }
+            SettingRow(label = stringResource(R.string.resting_hr)) {
+                NumberField(resting, SettingsOptions.RESTING_HR, setRestingHr, clear = { setRestingHr(null) })
+                Text(" " + stringResource(R.string.bpm))
+            }
+            SettingRow(label = stringResource(R.string.peak_hr)) {
+                NumberField(peak, SettingsOptions.PEAK_HR, setPeakHr, clear = { setPeakHr(null) })
+                Text(" " + stringResource(R.string.bpm))
+            }
+            if (healthStatus == HealthStatus.NO_PERMISSION) {
+                AppTextButton(onClick = askHealthPermission) {
+                    Text(stringResource(R.string.zones_read_health))
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.chevron))
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            val ready = resting != null && peak != null && peak > resting
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                HeartZones.NUMBERS.forEach { n ->
+                    ZoneButton(n, selected = n == zone, enabled = ready, onClick = { setZone(n) }, Modifier.weight(1f))
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            if (!ready) {
+                Text(stringResource(R.string.zones_need_data))
+            }
+            if (showZonesHelp) {
+                AlertDialog(
+                    onDismissRequest = { showZonesHelp = false },
+                    containerColor = Colors.Gray,
+                    confirmButton = {
+                        TextButton(onClick = { showZonesHelp = false }, colors = Colors.LinkButton) {
+                            Text(stringResource(android.R.string.ok))
+                        }
+                    },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            if (peakHr == null && age != null) {
+                                Text(stringResource(R.string.zones_peak_age))
+                            }
+                            measuredPeak?.let { Text(stringResource(R.string.zones_peak_measured, it)) }
+                            Text(stringResource(R.string.zones_override))
+                            Text(stringResource(R.string.zones_warning))
+                        }
+                    },
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(40.dp))
@@ -240,6 +354,27 @@ fun SettingsScreenContent(
 }
 
 @Composable
+private fun ZoneButton(number: Int, selected: Boolean, enabled: Boolean, onClick: () -> Unit, modifier: Modifier) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .height(48.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(if (selected) Colors.White else Colors.Gray)
+            .clickable(enabled = enabled, onClick = onClick),
+    ) {
+        Text(
+            text = "Z$number",
+            color = when {
+                selected -> Colors.Black
+                enabled -> Colors.White
+                else -> Colors.White.copy(alpha = 0.4f)
+            },
+        )
+    }
+}
+
+@Composable
 private fun formatDuration(seconds: Int): String =
     if (seconds < 60) {
         stringResource(R.string.seconds_value, seconds)
@@ -257,10 +392,14 @@ private fun formatInitialDelay(seconds: Int): String = when (seconds) {
 @Composable
 fun SettingSection(
     title: String,
+    titleAction: @Composable () -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        Text(text = title, style = Fonts.textLgBold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text = title, style = Fonts.textLgBold)
+            titleAction()
+        }
         Column(content = content)
     }
 }

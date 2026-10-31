@@ -78,4 +78,16 @@
     <string name="check_bluetooth">Bluetooth on</string>
     <string name="allow_permission">Allow the permission</string>
     <string name="turn_on_bluetooth">Turn on Bluetooth</string>
+    <string name="zones">Zones</string>
+    <string name="age">Age</string>
+    <string name="years">years</string>
+    <string name="resting_hr">Resting heart rate</string>
+    <string name="peak_hr">Highest heart rate</string>
+    <string name="zones_read_health">Read from Health Connect</string>
+    <string name="zones_need_data">Type your resting heart rate, and your age or your highest heart rate, to use the zones.</string>
+    <string name="zones_peak_age">The highest heart rate is an estimate from your age. It can be wrong by 10 BPM or more.</string>
+    <string name="zones_peak_measured">Your band measured up to %1$d BPM in the last weeks. This can include false readings.</string>
+    <string name="zones_override">Type a value to replace it. Delete it to use the automatic value again.</string>
+    <string name="zones_warning">The zones are an estimate. With a heart problem or medication, ask your doctor before you use them.</string>
+    <string name="zones_help">Zones help</string>
 </resources>

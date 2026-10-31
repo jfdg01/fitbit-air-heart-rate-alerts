@@ -76,4 +76,16 @@
     <string name="check_bluetooth">Bluetooth activado</string>
     <string name="allow_permission">Permitir</string>
     <string name="turn_on_bluetooth">Activar Bluetooth</string>
+    <string name="zones">Zonas</string>
+    <string name="age">Edad</string>
+    <string name="years">años</string>
+    <string name="resting_hr">Pulso en reposo</string>
+    <string name="peak_hr">Pulso máximo</string>
+    <string name="zones_read_health">Leer de Health Connect</string>
+    <string name="zones_need_data">Escribe tu pulso en reposo, y tu edad o tu pulso máximo, para usar las zonas.</string>
+    <string name="zones_peak_age">El pulso máximo es una estimación por tu edad. Puede fallar 10 ppm o más.</string>
+    <string name="zones_peak_measured">Tu pulsera ha medido hasta %1$d ppm en las últimas semanas. Puede incluir errores.</string>
+    <string name="zones_override">Escribe un valor para cambiarlo. Bórralo para volver al valor automático.</string>
+    <string name="zones_warning">Las zonas son una estimación. Si tienes un problema de corazón o tomas medicación, pregunta a tu médico antes de usarlas.</string>
+    <string name="zones_help">Ayuda sobre las zonas</string>
 </resources>

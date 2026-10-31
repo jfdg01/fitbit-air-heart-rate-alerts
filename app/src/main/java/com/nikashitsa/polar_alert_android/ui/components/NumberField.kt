@@ -26,18 +26,20 @@ import com.nikashitsa.polar_alert_android.ui.theme.Colors
 /**
  * A whole number that the user types. Each valid value goes to [setValue] at once, because a
  * tap on a button does not move the focus. Text outside [range] shows in red, and the last
- * valid value comes back when the field loses the focus.
+ * valid value comes back when the field loses the focus. A field left empty calls [clear].
  */
 @Composable
 fun NumberField(
-    value: Int,
+    value: Int?,
     range: IntRange,
     setValue: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    clear: () -> Unit = {},
 ) {
-    var text by remember { mutableStateOf("$value") }
-    LaunchedEffect(value) { text = "$value" }
-    val valid = text.toIntOrNull() in range
+    var focused by remember { mutableStateOf(false) }
+    var text by remember { mutableStateOf(value?.toString().orEmpty()) }
+    LaunchedEffect(value) { text = value?.toString().orEmpty() }
+    val valid = text.isEmpty() || text.toIntOrNull() in range
     val focusManager = LocalFocusManager.current
     val color = if (valid) Colors.White else Colors.Red
 
@@ -53,7 +55,14 @@ fun NumberField(
             cursorBrush = SolidColor(Colors.White),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-            modifier = Modifier.onFocusChanged { if (!it.isFocused) text = "$value" },
+            modifier = Modifier.onFocusChanged {
+                // Only a real exit counts: the field reports "no focus" when it first shows too.
+                if (focused && !it.isFocused) {
+                    if (text.isEmpty()) clear()
+                    text = value?.toString().orEmpty()
+                }
+                focused = it.isFocused
+            },
         )
         HorizontalDivider(color = color)
     }

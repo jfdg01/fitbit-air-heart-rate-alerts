@@ -10,9 +10,14 @@
 
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
+    <!-- The zones use the resting and the highest heart rate that Health Connect holds. -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
+
     <!-- The search sheet opens Google Health when the band does not share its heart rate. -->
     <queries>
         <package android:name="com.fitbit.FitbitMobile" />
+        <package android:name="com.google.android.apps.healthdata" />
     </queries>
 
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true"/>
@@ -37,7 +42,22 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Android 13: Health Connect opens this to show why the app reads the data. -->
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
         </activity>
+        <!-- Android 14 and later: the same link. -->
+        <activity-alias
+            android:name=".ViewPermissionUsageActivity"
+            android:exported="true"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
     </application>
 
 </manifest>
