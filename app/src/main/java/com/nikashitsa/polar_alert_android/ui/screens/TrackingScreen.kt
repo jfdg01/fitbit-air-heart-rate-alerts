@@ -1,7 +1,5 @@
 package com.nikashitsa.polar_alert_android.ui.screens
 
-import android.app.Activity
-import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -40,20 +38,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.android.play.core.review.ReviewManagerFactory
 import com.nikashitsa.polar_alert_android.R
 import com.nikashitsa.polar_alert_android.lib.BluetoothViewModel
 import com.nikashitsa.polar_alert_android.lib.DeviceConnectionState
 import com.nikashitsa.polar_alert_android.lib.HrFeature
 import com.nikashitsa.polar_alert_android.lib.SettingsDefaults
-import com.nikashitsa.polar_alert_android.lib.SettingsLimits
 import com.nikashitsa.polar_alert_android.lib.SettingsOptions
 import com.nikashitsa.polar_alert_android.lib.SettingsViewModel
 import com.nikashitsa.polar_alert_android.lib.SoundType
@@ -84,7 +79,6 @@ fun TrackingScreen(
     val alertInterval by settings.alertInterval.collectAsState()
     val outOfRangeFor by settings.outOfRangeFor.collectAsState()
     val initialDelay by settings.initialDelay.collectAsState()
-    val unlimitedAccess by settings.unlimitedAccess.collectAsState()
 
     BackHandler {
         bluetooth.hrStreamStop()
@@ -103,11 +97,6 @@ fun TrackingScreen(
         outOfRangeFor = outOfRangeFor,
         initialDelay = initialDelay,
         vibrate = vibration::vibrate,
-        // A demo session is not real use, so it must not eat into the free sessions.
-        countTrackedSession = if (bluetooth.isDemo) ({}) else settings::countTrackedSession,
-        // Only entitled users (bought, or grandfathered) are asked, so free-tier users
-        // hitting the paywall don't get prompted to rate the app.
-        canRequestReview = unlimitedAccess,
         onBack = onBack,
     )
 }
@@ -126,15 +115,9 @@ fun TrackingScreenContent(
     outOfRangeFor: Int = SettingsDefaults.OUT_OF_RANGE_FOR,
     initialDelay: Int = SettingsDefaults.INITIAL_DELAY,
     vibrate: (VibrationType) -> Unit = {},
-    countTrackedSession: () -> Unit = {},
-    canRequestReview: Boolean = false,
     initialBpm: Int = -1,
     onBack: () -> Unit = {}
 ) {
-    val context = LocalContext.current
-    val activity = context as? Activity
-    val sessionCompleted = rememberSessionCompleted(onComplete = countTrackedSession)
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -166,40 +149,7 @@ fun TrackingScreenContent(
 
         AppButton(stringResource(R.string.stop)) {
             hrStreamStop()
-            // Only worth asking for a review after a session that actually ran.
-            if (sessionCompleted && canRequestReview) requestAppReview(context, activity)
             onBack()
-        }
-    }
-}
-
-/**
- * Waits out the minimum session length, then reports the session as completed exactly once.
- * Returns whether that point has been reached. Both pieces of state survive rotation and
- * process death, and the remaining time is recomputed rather than restarted.
- */
-@Composable
-private fun rememberSessionCompleted(onComplete: () -> Unit): Boolean {
-    val startedAt = rememberSaveable { System.currentTimeMillis() }
-    var completed by rememberSaveable { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        if (completed) return@LaunchedEffect
-        val remaining = SettingsLimits.SESSION_MIN_DURATION_MS - (System.currentTimeMillis() - startedAt)
-        if (remaining > 0) delay(remaining.milliseconds)
-        completed = true
-        onComplete()
-    }
-    return completed
-}
-
-private fun requestAppReview(context: Context, activity: Activity?) {
-    val manager = ReviewManagerFactory.create(context)
-    val request = manager.requestReviewFlow()
-    request.addOnCompleteListener { task ->
-        if (task.isSuccessful && activity != null) {
-            val reviewInfo = task.result
-            manager.launchReviewFlow(activity, reviewInfo)
         }
     }
 }

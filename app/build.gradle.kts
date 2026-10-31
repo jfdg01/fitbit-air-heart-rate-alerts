@@ -91,9 +91,6 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
     ksp(libs.hilt.android.compiler)
-    implementation(libs.review)
-    implementation(libs.review.ktx)
-    implementation(libs.billing.ktx)
 }
 
 // Hilt's hiltJavaCompile* tasks don't pick up the toolchain above and would otherwise compile

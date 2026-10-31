@@ -1,6 +1,5 @@
 package com.nikashitsa.polar_alert_android.ui.screens
 
-import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -27,7 +26,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nikashitsa.polar_alert_android.R
@@ -45,7 +43,6 @@ import com.nikashitsa.polar_alert_android.ui.components.AppSwitch
 import com.nikashitsa.polar_alert_android.ui.components.DevicePicker
 import com.nikashitsa.polar_alert_android.ui.components.DropdownMenuSelector
 import com.nikashitsa.polar_alert_android.ui.components.LanguageSelector
-import com.nikashitsa.polar_alert_android.ui.components.Paywall
 
 @Composable
 fun SettingsScreen(
@@ -64,8 +61,6 @@ fun SettingsScreen(
     val alertInterval by settings.alertInterval.collectAsState()
     val outOfRangeFor by settings.outOfRangeFor.collectAsState()
     val initialDelay by settings.initialDelay.collectAsState()
-    val hasAccess by settings.hasAccess.collectAsState()
-    val freeSessionsLeft by settings.freeSessionsLeft.collectAsState()
     val language by settings.language.collectAsState()
 
     BackHandler {
@@ -90,8 +85,6 @@ fun SettingsScreen(
         hrMax = hrMax,
         setHrMax = settings::setHrMax,
         playSound = sound::play,
-        hasAccess = hasAccess,
-        freeSessionsLeft = freeSessionsLeft,
         language = language,
         setLanguage = settings::setLanguage,
         onNext = onNext,
@@ -118,8 +111,6 @@ fun SettingsScreenContent(
     hrMax: Int = SettingsDefaults.HR_MAX,
     setHrMax: (Int) -> Unit = {},
     playSound: (SoundType) -> Unit = {},
-    hasAccess: Boolean = true,
-    freeSessionsLeft: Int = 0,
     language: AppLanguage = AppLanguage.DEFAULT,
     setLanguage: (AppLanguage) -> Unit = {},
     onNext: () -> Unit = {}
@@ -127,11 +118,6 @@ fun SettingsScreenContent(
     val scrollState = rememberScrollState()
     var showPicker by rememberSaveable { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var showPaywall by rememberSaveable { mutableStateOf(false) }
-    val paywallSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    // Read out here rather than inside the sheet: a ModalBottomSheet renders in its own
-    // window, where LocalContext is not necessarily the Activity that billing needs.
-    val activity = LocalContext.current as? Activity
 
     Column(
         modifier = Modifier
@@ -250,31 +236,12 @@ fun SettingsScreenContent(
         Spacer(modifier = Modifier.height(40.dp))
         Spacer(modifier = Modifier.weight(1f))
 
-        // The count is only advertised while there are free sessions to advertise: an entitled
-        // user, or one who has used them all, just gets "Start".
-        val startLabel = if (freeSessionsLeft > 0) {
-            stringResource(R.string.start_for_free, freeSessionsLeft)
-        } else {
-            stringResource(R.string.start)
-        }
-        AppButton(startLabel) { if (hasAccess) onNext() else showPaywall = true }
+        AppButton(stringResource(R.string.start), onClick = onNext)
 
         if (showPicker) {
             DevicePicker(sheetState) {
                 showPicker = false
             }
-        }
-
-        if (showPaywall) {
-            Paywall(
-                sheetState = paywallSheetState,
-                activity = activity,
-                onDismissRequest = { showPaywall = false },
-                onContinue = {
-                    showPaywall = false
-                    onNext()
-                },
-            )
         }
     }
 }
@@ -332,6 +299,6 @@ fun SettingsScreenPreview() {
 @Composable
 fun SettingsScreenFreeSessionsPreview() {
     HeartAlertTheme {
-        SettingsScreenContent(freeSessionsLeft = 5)
+        SettingsScreenContent()
     }
 }

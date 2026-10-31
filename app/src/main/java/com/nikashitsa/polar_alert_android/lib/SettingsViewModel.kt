@@ -31,18 +31,6 @@ class SettingsViewModel @Inject constructor(
     val initialDelay: StateFlow<Int> = _initialDelay
     private val _language = MutableStateFlow<AppLanguage>(AppLanguage.resolve(null))
     val language: StateFlow<AppLanguage> = _language
-    private val _unlimitedAccess = MutableStateFlow<Boolean>(SettingsDefaults.UNLIMITED_ACCESS)
-    val unlimitedAccess: StateFlow<Boolean> = _unlimitedAccess
-
-    // Seeded true, unlike every other setting, because DataStore loads asynchronously and a
-    // false seed would flash the paywall at an entitled user who taps Start immediately.
-    private val _hasAccess = MutableStateFlow<Boolean>(true)
-    val hasAccess: StateFlow<Boolean> = _hasAccess
-
-    // Seeded 0 for the same reason: until DataStore loads the button reads a plain "Start",
-    // so an entitled user is never briefly offered free sessions.
-    private val _freeSessionsLeft = MutableStateFlow<Int>(0)
-    val freeSessionsLeft: StateFlow<Int> = _freeSessionsLeft
 
     init {
         observe(repository.volumeFlow, _volume)
@@ -53,9 +41,6 @@ class SettingsViewModel @Inject constructor(
         observe(repository.outOfRangeForFlow, _outOfRangeFor)
         observe(repository.initialDelayFlow, _initialDelay)
         observe(repository.languageFlow.map(AppLanguage::resolve), _language)
-        observe(repository.unlimitedAccessFlow, _unlimitedAccess)
-        observe(repository.hasAccessFlow, _hasAccess)
-        observe(repository.freeSessionsLeftFlow, _freeSessionsLeft)
     }
 
     fun setVolume(value: Int) = update { repository.setVolume(value) }
@@ -66,7 +51,6 @@ class SettingsViewModel @Inject constructor(
     fun setOutOfRangeFor(value: Int) = update { repository.setOutOfRangeFor(value) }
     fun setInitialDelay(value: Int) = update { repository.setInitialDelay(value) }
     fun setLanguage(value: AppLanguage) = update { repository.setLanguage(value) }
-    fun countTrackedSession() = update { repository.countTrackedSession() }
 
     private fun <T> observe(flow: Flow<T>, state: MutableStateFlow<T>) {
         viewModelScope.launch {

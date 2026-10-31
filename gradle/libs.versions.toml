@@ -1,7 +1,4 @@
 [versions]
-billing = "9.1.0"
-reviewKtx = "2.0.2"
-review = "2.0.2"
 agp = "8.11.0"
 datastorePreferences = "1.1.7"
 hiltAndroid = "2.56.2"
@@ -18,9 +15,6 @@ activityCompose = "1.10.1"
 composeBom = "2025.06.01"
 
 [libraries]
-billing-ktx = { module = "com.android.billingclient:billing-ktx", version.ref = "billing" }
-review-ktx = { module = "com.google.android.play:review-ktx", version.ref = "reviewKtx" }
-review = { module = "com.google.android.play:review", version.ref = "review" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }

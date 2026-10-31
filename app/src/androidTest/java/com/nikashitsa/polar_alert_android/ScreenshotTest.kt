@@ -121,8 +121,6 @@ class ScreenshotTest {
             batteryStatusFeature = BatteryStatusFeature(isSupported = true, batteryLevel = 70),
             hrMin = HR_MIN,
             hrMax = HR_MAX,
-            hasAccess = true,
-            freeSessionsLeft = 0,
             language = language,
         )
     }
