@@ -44,8 +44,15 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setVolume(value: Int) = update { repository.setVolume(value) }
-    fun setHrMin(value: Int) = update { repository.setHrMin(value) }
-    fun setHrMax(value: Int) = update { repository.setHrMax(value) }
+    // Each limit pushes the other one, so 120-140 can become 150-170 in any order.
+    fun setHrMin(value: Int) = update {
+        repository.setHrMin(value)
+        if (value > _hrMax.value) repository.setHrMax(value)
+    }
+    fun setHrMax(value: Int) = update {
+        repository.setHrMax(value)
+        if (value < _hrMin.value) repository.setHrMin(value)
+    }
     fun setVibrate(value: Boolean) = update { repository.setVibrate(value) }
     fun setAlertInterval(value: Int) = update { repository.setAlertInterval(value) }
     fun setOutOfRangeFor(value: Int) = update { repository.setOutOfRangeFor(value) }

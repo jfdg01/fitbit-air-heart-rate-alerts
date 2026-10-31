@@ -43,6 +43,7 @@ import com.nikashitsa.polar_alert_android.ui.components.AppSwitch
 import com.nikashitsa.polar_alert_android.ui.components.DevicePicker
 import com.nikashitsa.polar_alert_android.ui.components.DropdownMenuSelector
 import com.nikashitsa.polar_alert_android.ui.components.LanguageSelector
+import com.nikashitsa.polar_alert_android.ui.components.NumberField
 
 @Composable
 fun SettingsScreen(
@@ -136,20 +137,12 @@ fun SettingsScreenContent(
 
         SettingSection(title = stringResource(R.string.heart_rate)) {
             SettingRow(label = stringResource(R.string.min)) {
-                DropdownMenuSelector(
-                    hrMin,
-                    label = { stringResource(R.string.bpm_value, it) },
-                    options = 30..hrMax,
-                    setValue = { it -> setHrMin(it) }
-                )
+                NumberField(hrMin, SettingsOptions.HR_LOWEST..SettingsOptions.HR_HIGHEST, setHrMin)
+                Text(" " + stringResource(R.string.bpm))
             }
             SettingRow(label = stringResource(R.string.max)) {
-                DropdownMenuSelector(
-                    hrMax,
-                    label = { stringResource(R.string.bpm_value, it) },
-                    options = hrMin..240,
-                    setValue = { it -> setHrMax(it) }
-                )
+                NumberField(hrMax, SettingsOptions.HR_LOWEST..SettingsOptions.HR_HIGHEST, setHrMax)
+                Text(" " + stringResource(R.string.bpm))
             }
         }
 

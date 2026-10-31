@@ -38,6 +38,9 @@ object SettingsOptions {
     // initial delay never times out, it only ends once HR first reaches the range
     const val UNTIL_IN_RANGE = -1
 
+    const val HR_LOWEST = 30
+    const val HR_HIGHEST = 240
+
     val ALERT_INTERVAL = listOf(1, 3, 5, 10)
     val OUT_OF_RANGE_FOR = listOf(0, 5, 10, 30, 60, 300, 600)
     val INITIAL_DELAY = listOf(0, UNTIL_IN_RANGE, 60, 300, 600, 900)
