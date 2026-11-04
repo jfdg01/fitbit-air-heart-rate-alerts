@@ -9,6 +9,7 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
+import android.bluetooth.BluetoothStatusCodes
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
@@ -17,6 +18,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelUuid
@@ -163,7 +165,14 @@ class HeartRateBle @Inject constructor(
             } else {
                 BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE
             }
-            g.writeDescriptor(cccd, value) == BluetoothGatt.GATT_SUCCESS
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                g.writeDescriptor(cccd, value) == BluetoothStatusCodes.SUCCESS
+            } else {
+                @Suppress("DEPRECATION")
+                cccd.value = value
+                @Suppress("DEPRECATION")
+                g.writeDescriptor(cccd)
+            }
         }
     }
 
@@ -243,6 +252,13 @@ class HeartRateBle @Inject constructor(
             operationDone()
         }
 
+        // Android 12 calls this version only. Android 13 and later call the version with the value.
+        @Suppress("OVERRIDE_DEPRECATION")
+        override fun onCharacteristicRead(g: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
+            @Suppress("DEPRECATION")
+            onCharacteristicRead(g, characteristic, characteristic.value ?: byteArrayOf(), status)
+        }
+
         override fun onDescriptorWrite(g: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
             Log.d(tag, "Notification setting written, status $status")
             operationDone()
@@ -257,6 +273,13 @@ class HeartRateBle @Inject constructor(
             // A band that is off the wrist can send 0. That is no reading, not a low heart rate.
             val bpm = parseHeartRate(value)?.takeIf { it > 0 } ?: return
             main.post { onHeartRate?.invoke(bpm) }
+        }
+
+        // Android 12 calls this version only. Android 13 and later call the version with the value.
+        @Suppress("OVERRIDE_DEPRECATION")
+        override fun onCharacteristicChanged(g: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+            @Suppress("DEPRECATION")
+            onCharacteristicChanged(g, characteristic, characteristic.value ?: return)
         }
     }
 

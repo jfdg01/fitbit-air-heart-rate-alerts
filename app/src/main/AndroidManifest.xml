@@ -42,7 +42,7 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Android 13: Health Connect opens this to show why the app reads the data. -->
+            <!-- Android 13 and earlier: Health Connect opens this to show why the app reads the data. -->
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
