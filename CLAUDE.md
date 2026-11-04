@@ -11,3 +11,7 @@ Las cinco labels por defecto: `needs-triage`, `needs-info`, `ready-for-agent`, `
 ### Domain docs
 
 Single-context: un `GLOSSARY.md` y `docs/adr/` en la raíz. Ver `docs/agents/domain.md`.
+
+## La prueba en un teléfono
+
+Una prueba por adb, con la demo y un pulso fijo, sigue `docs/agents/prueba-por-adb.md`.

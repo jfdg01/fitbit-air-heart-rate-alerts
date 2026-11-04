@@ -171,13 +171,16 @@ class BluetoothViewModel @Inject constructor(
             while (true) {
                 val t = (System.currentTimeMillis() - startedAt) / DEMO_HR_PERIOD_MS.toDouble()
                 val hr = 125 + 35 * sin(2 * PI * t) + Random.nextInt(-2, 3)
-                onNext(hr.roundToInt())
+                onNext(demoBpm ?: hr.roundToInt())
                 delay(1000)
             }
         }
     }
 
     companion object {
+        /** Replaces the wave of the demo while it is not null. The debug build sets it from adb. */
+        @Volatile
+        var demoBpm: Int? = null
         const val DEMO_ADDRESS = "demo"
         const val DEMO_DEVICE_NAME = "Heart Alert Demo"
         private const val CONNECT_TIMEOUT_MS = 20_000L

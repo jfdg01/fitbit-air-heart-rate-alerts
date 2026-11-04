@@ -52,17 +52,17 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nikashitsa.polar_alert_android.R
 import com.nikashitsa.polar_alert_android.TrackingService
+import com.nikashitsa.polar_alert_android.lib.AlertSettings
+import com.nikashitsa.polar_alert_android.lib.AlertState
+import com.nikashitsa.polar_alert_android.lib.AlertsViewModel
 import com.nikashitsa.polar_alert_android.lib.BluetoothViewModel
 import com.nikashitsa.polar_alert_android.lib.DeviceConnectionState
 import com.nikashitsa.polar_alert_android.lib.HrFeature
 import com.nikashitsa.polar_alert_android.lib.SettingsDefaults
-import com.nikashitsa.polar_alert_android.lib.SettingsOptions
 import com.nikashitsa.polar_alert_android.lib.SettingsViewModel
 import com.nikashitsa.polar_alert_android.lib.SoundType
 import com.nikashitsa.polar_alert_android.lib.SoundViewModel
 import com.nikashitsa.polar_alert_android.lib.TrackingState
-import com.nikashitsa.polar_alert_android.lib.VibrationType
-import com.nikashitsa.polar_alert_android.lib.VibrationViewModel
 import com.nikashitsa.polar_alert_android.ui.components.AppButton
 import com.nikashitsa.polar_alert_android.ui.theme.Colors
 import com.nikashitsa.polar_alert_android.ui.theme.Fonts
@@ -76,7 +76,7 @@ fun TrackingScreen(
     bluetooth: BluetoothViewModel = hiltViewModel(),
     settings: SettingsViewModel = hiltViewModel(),
     sound: SoundViewModel = hiltViewModel(),
-    vibration: VibrationViewModel = hiltViewModel(),
+    alertsViewModel: AlertsViewModel = hiltViewModel(),
     onBack: () -> Unit = {}
 ) {
     val deviceConnectionState = bluetooth.deviceConnectionState.collectAsState()
@@ -86,15 +86,24 @@ fun TrackingScreen(
     val alertInterval by settings.alertInterval.collectAsState()
     val outOfRangeFor by settings.outOfRangeFor.collectAsState()
     val initialDelay by settings.initialDelay.collectAsState()
+    val alerts = alertsViewModel.alerts
+    val alertState by alerts.state.collectAsState()
 
     // A connectedDevice service needs BLUETOOTH_CONNECT. The demo runs without it, and without the service.
     val context = LocalContext.current
+    val alertSettings = AlertSettings(hrMin, hrMax, alertInterval, outOfRangeFor, initialDelay)
+    LaunchedEffect(alertSettings) { alerts.start(alertSettings) }
     DisposableEffect(Unit) {
         val service = Intent(context, TrackingService::class.java)
         val allowed = context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
         if (allowed) context.startForegroundService(service)
-        // A rotation recreates the screen. The service stays up, and the next start only updates it.
-        onDispose { if ((context as? Activity)?.isChangingConfigurations != true) context.stopService(service) }
+        // A rotation recreates the screen. The session and the service stay up, and the next start only updates them.
+        onDispose {
+            if ((context as? Activity)?.isChangingConfigurations != true) {
+                alerts.stop()
+                context.stopService(service)
+            }
+        }
     }
 
     BackHandler {
@@ -105,15 +114,14 @@ fun TrackingScreen(
     TrackingScreenContent(
         deviceConnectionState = deviceConnectionState.value,
         hrFeature = hrFeature.value,
-        hrStreamStart = bluetooth::hrStreamStart,
+        alertState = alertState,
+        hrStreamStart = { address -> bluetooth.hrStreamStart(address) { alerts.onHeartRate(it) } },
         hrStreamStop = bluetooth::hrStreamStop,
         playSound = sound::play,
         hrMin = hrMin,
         hrMax = hrMax,
-        alertInterval = alertInterval,
         outOfRangeFor = outOfRangeFor,
         initialDelay = initialDelay,
-        vibrate = vibration::vibrate,
         onBack = onBack,
     )
 }
@@ -123,16 +131,14 @@ fun TrackingScreen(
 fun TrackingScreenContent(
     deviceConnectionState: DeviceConnectionState,
     hrFeature: HrFeature = HrFeature(),
-    hrStreamStart: (String, (Int) -> Unit) -> Unit = {_, _ ->},
+    alertState: AlertState = AlertState(),
+    hrStreamStart: (String) -> Unit = {},
     hrStreamStop: () -> Unit = {},
     playSound: (SoundType) -> Unit = {},
     hrMin: Int = SettingsDefaults.HR_MIN,
     hrMax: Int = SettingsDefaults.HR_MAX,
-    alertInterval: Int = SettingsDefaults.ALERT_INTERVAL,
     outOfRangeFor: Int = SettingsDefaults.OUT_OF_RANGE_FOR,
     initialDelay: Int = SettingsDefaults.INITIAL_DELAY,
-    vibrate: (VibrationType) -> Unit = {},
-    initialBpm: Int = -1,
     onBack: () -> Unit = {}
 ) {
     Column(
@@ -151,15 +157,11 @@ fun TrackingScreenContent(
         BpmView(
             deviceConnectionState = deviceConnectionState,
             hrFeature = hrFeature,
+            alertState = alertState,
             hrStreamStart = hrStreamStart,
             playSound = playSound,
-            hrMin = hrMin,
-            hrMax = hrMax,
-            alertInterval = alertInterval,
             outOfRangeFor = outOfRangeFor,
             initialDelay = initialDelay,
-            vibrate = vibrate,
-            initialBpm = initialBpm,
         )
 
         Spacer(modifier = Modifier.weight(1f))
@@ -175,94 +177,15 @@ fun TrackingScreenContent(
 fun BpmView(
     deviceConnectionState: DeviceConnectionState,
     hrFeature: HrFeature,
-    hrStreamStart: (String, (Int) -> Unit) -> Unit = {_, _ ->},
+    alertState: AlertState,
+    hrStreamStart: (String) -> Unit = {},
     playSound: (SoundType) -> Unit = {},
-    hrMin: Int = SettingsDefaults.HR_MIN,
-    hrMax: Int = SettingsDefaults.HR_MAX,
-    alertInterval: Int = SettingsDefaults.ALERT_INTERVAL,
     outOfRangeFor: Int = SettingsDefaults.OUT_OF_RANGE_FOR,
     initialDelay: Int = SettingsDefaults.INITIAL_DELAY,
-    vibrate: (VibrationType) -> Unit = {},
-    initialBpm: Int = -1,
 ) {
-    var state by rememberSaveable { mutableStateOf(TrackingState.GOOD) }
-    var bpm by rememberSaveable { mutableIntStateOf(initialBpm) }
     var prevConnectionState by rememberSaveable(
         stateSaver = DeviceConnectionState.Saver
     ) { mutableStateOf(DeviceConnectionState.Connected()) }
-    // timestamps in ms, null when they haven't happened yet
-    var lastTriggerTime by rememberSaveable { mutableStateOf<Long?>(null) }
-    // start of the current uninterrupted out-of-range stretch, null while in range
-    var outOfRangeSince by rememberSaveable { mutableStateOf<Long?>(null) }
-    // whether the stretch has already lasted long enough for alerts to start
-    var alerting by rememberSaveable { mutableStateOf(false) }
-    // alerts are held back at the start of a session: for a fixed delay until it
-    // runs out, or, with "until in range", until HR first reaches the range
-    var initialDelayPassed by rememberSaveable { mutableStateOf(false) }
-    val trackingStartedAt = rememberSaveable { System.currentTimeMillis() }
-    val initialDelayActive = initialDelay != 0 && !initialDelayPassed
-    val outOfRangeForInterval = outOfRangeFor * 1000 // ms
-    val throttleInterval = alertInterval * 1000 - 310 // ms
-
-    // A fixed delay ends on time even if no out-of-range sample arrives to notice it,
-    // so the countdown doesn't sit at 00:00 while HR stays in range.
-    if (initialDelay > 0 && !initialDelayPassed) {
-        LaunchedEffect(trackingStartedAt, initialDelay) {
-            val remaining = initialDelay * 1000L - (System.currentTimeMillis() - trackingStartedAt)
-            if (remaining > 0) delay(remaining.milliseconds)
-            initialDelayPassed = true
-        }
-    }
-
-    // Called for every heart rate sample the strap sends, about once a second.
-    fun onHeartRate(hr: Int) {
-        bpm = hr
-        val prevState = state
-        state = TrackingState.of(hr, hrMin, hrMax)
-        val now = System.currentTimeMillis()
-
-        // Back in range. Announce the recovery only if we were really alerting.
-        if (state == TrackingState.GOOD) {
-            outOfRangeSince = null
-            lastTriggerTime = null
-            // only the "until in range" delay ends here; a fixed delay runs its full time
-            if (initialDelay == SettingsOptions.UNTIL_IN_RANGE) initialDelayPassed = true
-            if (alerting) {
-                alerting = false
-                playSound(state.soundState)
-            }
-            return
-        }
-
-        // Out of range. Keep timing the stretch even while alerts are held back.
-        val since = outOfRangeSince ?: now
-        outOfRangeSince = since
-
-        // Hold everything back until the initial delay is over. The "until in
-        // range" option never times out, it only ends in the branch above.
-        if (initialDelay != 0 && !initialDelayPassed) {
-            val timedOut = initialDelay > 0 && now - trackingStartedAt >= initialDelay * 1000
-            if (!timedOut) return
-            initialDelayPassed = true
-        }
-
-        // Stay quiet until HR has been out of range long enough.
-        if (now - since < outOfRangeForInterval) return
-
-        // Say what is wrong when alerts start, and again on a too low <-> too high flip.
-        if (!alerting || state != prevState) {
-            alerting = true
-            playSound(state.soundState)
-        }
-
-        // Repeat the beep and the vibration at the chosen interval.
-        val lastTrigger = lastTriggerTime
-        if (lastTrigger == null || now - lastTrigger > throttleInterval) {
-            lastTriggerTime = now
-            state.sound?.let(playSound)
-            state.vibration?.let(vibrate)
-        }
-    }
 
     when (val connectionState = deviceConnectionState) {
         is DeviceConnectionState.Disconnected -> {
@@ -283,7 +206,7 @@ fun BpmView(
                     if (prevConnectionState is DeviceConnectionState.Disconnected) {
                         playSound(SoundType.CONNECTED)
                     }
-                    hrStreamStart(connectionState.address, ::onHeartRate)
+                    hrStreamStart(connectionState.address)
                 }
 
                 Column(
@@ -291,19 +214,19 @@ fun BpmView(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     BpmReadout(
-                        bpm = bpm,
-                        state = state,
-                        color = if (alerting) Colors.Red else Colors.White,
+                        bpm = alertState.bpm,
+                        state = alertState.trackingState,
+                        color = if (alertState.alerting) Colors.Red else Colors.White,
                     )
                     AlertStatus(
-                        state = state,
-                        alerting = alerting,
-                        hasReading = bpm > -1,
+                        state = alertState.trackingState,
+                        alerting = alertState.alerting,
+                        hasReading = alertState.bpm > -1,
                         initialDelay = initialDelay,
-                        initialDelayActive = initialDelayActive,
-                        trackingStartedAt = trackingStartedAt,
-                        outOfRangeSince = outOfRangeSince,
-                        outOfRangeForInterval = outOfRangeForInterval,
+                        initialDelayActive = alertState.initialDelayActive,
+                        trackingStartedAt = alertState.startedAt,
+                        outOfRangeSince = alertState.outOfRangeSince,
+                        outOfRangeForInterval = outOfRangeFor * 1000,
                     )
                 }
             } else {
@@ -476,7 +399,7 @@ fun TrackingScreenConnectedPreview() {
         TrackingScreenContent(
             deviceConnectionState = DeviceConnectionState.Connected(),
             hrFeature = HrFeature(true),
-            initialBpm = 117,
+            alertState = AlertState(bpm = 117),
         )
     }
 }
