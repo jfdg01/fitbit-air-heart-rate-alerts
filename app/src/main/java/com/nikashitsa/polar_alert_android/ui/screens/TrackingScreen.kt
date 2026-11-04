@@ -1,5 +1,9 @@
 package com.nikashitsa.polar_alert_android.ui.screens
 
+import android.Manifest
+import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -24,6 +28,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -45,6 +51,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nikashitsa.polar_alert_android.R
+import com.nikashitsa.polar_alert_android.TrackingService
 import com.nikashitsa.polar_alert_android.lib.BluetoothViewModel
 import com.nikashitsa.polar_alert_android.lib.DeviceConnectionState
 import com.nikashitsa.polar_alert_android.lib.HrFeature
@@ -79,6 +86,16 @@ fun TrackingScreen(
     val alertInterval by settings.alertInterval.collectAsState()
     val outOfRangeFor by settings.outOfRangeFor.collectAsState()
     val initialDelay by settings.initialDelay.collectAsState()
+
+    // A connectedDevice service needs BLUETOOTH_CONNECT. The demo runs without it, and without the service.
+    val context = LocalContext.current
+    DisposableEffect(Unit) {
+        val service = Intent(context, TrackingService::class.java)
+        val allowed = context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+        if (allowed) context.startForegroundService(service)
+        // A rotation recreates the screen. The service stays up, and the next start only updates it.
+        onDispose { if ((context as? Activity)?.isChangingConfigurations != true) context.stopService(service) }
+    }
 
     BackHandler {
         bluetooth.hrStreamStop()

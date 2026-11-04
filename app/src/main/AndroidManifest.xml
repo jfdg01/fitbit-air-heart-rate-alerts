@@ -23,6 +23,10 @@
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true"/>
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- TrackingService keeps the app alive with the screen off, from Start to Stop. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+
     <application
         android:name=".MyApplication"
         android:allowBackup="true"
@@ -58,6 +62,11 @@
                 <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
             </intent-filter>
         </activity-alias>
+        <service
+            android:name=".TrackingService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice"
+            android:stopWithTask="true" />
     </application>
 
 </manifest>
