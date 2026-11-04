@@ -19,7 +19,8 @@ import kotlin.random.Random
 
 @HiltViewModel
 class BluetoothViewModel @Inject constructor(
-    private val ble: HeartRateBle
+    private val ble: HeartRateBle,
+    room: Room,
 ): ViewModel() {
 
     private val tag = "BluetoothViewModel"
@@ -51,6 +52,9 @@ class BluetoothViewModel @Inject constructor(
         get() = (_deviceConnectionState.value as? DeviceConnectionState.Connected)?.address == DEMO_ADDRESS
 
     init {
+        viewModelScope.launch {
+            deviceConnectionState.collect { room.strapConnected = it is DeviceConnectionState.Connected }
+        }
         ble.onConnected = { device ->
             Log.d(tag, "CONNECTED: ${device.address}")
             _deviceName.value = device.name

@@ -55,6 +55,7 @@ import com.nikashitsa.polar_alert_android.ui.components.DropdownMenuSelector
 import com.nikashitsa.polar_alert_android.ui.components.LanguageSelector
 import com.nikashitsa.polar_alert_android.ui.components.NameField
 import com.nikashitsa.polar_alert_android.ui.components.NumberField
+import com.nikashitsa.polar_alert_android.ui.components.RoomSection
 
 @Composable
 fun SettingsScreen(
@@ -129,6 +130,7 @@ fun SettingsScreen(
         playSound = sound::play,
         language = language,
         setLanguage = settings::setLanguage,
+        roomSection = { RoomSection() },
         onNext = onNext,
     )
 }
@@ -169,6 +171,7 @@ fun SettingsScreenContent(
     playSound: (SoundType) -> Unit = {},
     language: AppLanguage = AppLanguage.DEFAULT,
     setLanguage: (AppLanguage) -> Unit = {},
+    roomSection: @Composable () -> Unit = {},
     onNext: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
@@ -351,6 +354,10 @@ fun SettingsScreenContent(
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        roomSection()
 
         Spacer(modifier = Modifier.height(40.dp))
         Spacer(modifier = Modifier.weight(1f))

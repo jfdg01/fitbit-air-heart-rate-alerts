@@ -9,5 +9,12 @@
                 <action android:name="com.nikashitsa.polar_alert_android.SET_BPM" />
             </intent-filter>
         </receiver>
+        <receiver
+            android:name=".DemoPartnerReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.nikashitsa.polar_alert_android.SET_PARTNER" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

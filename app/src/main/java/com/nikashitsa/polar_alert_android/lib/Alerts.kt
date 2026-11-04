@@ -43,6 +43,8 @@ class Alerts(
 
     private var settings = AlertSettings()
     private var running = false
+    /** A session runs, from Start to Stop. */
+    val isRunning: Boolean get() = running
     private var lastTriggerTime: Long? = null
 
     /** A second call before [stop] only changes the settings, so a rotation does not restart the session. */

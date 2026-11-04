@@ -33,4 +33,11 @@ class VoiceTest {
         assertEquals("A", spokenName(""))
         assertEquals("Javi", spokenName("Javi"))
     }
+
+    @Test
+    fun aRunnerWithoutANameIsBInThePhoneThatJoins() {
+        assertEquals("B", spokenName("", RoomRole.JOIN.letter))
+        assertEquals("A", spokenName("", RoomRole.HOST.letter))
+        assertEquals("Javi", spokenName("Javi", RoomRole.JOIN.letter))
+    }
 }

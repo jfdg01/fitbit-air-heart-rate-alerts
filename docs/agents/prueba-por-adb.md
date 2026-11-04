@@ -30,18 +30,38 @@ adb -s <serie> shell am broadcast -a com.nikashitsa.polar_alert_android.SET_BPM 
   -p com.nikashitsa.polar_alert_android.fitbit --ei bpm 170
 ```
 
-## El log
+## El compañero falso
 
-Cada sonido y cada vibración deja una línea en logcat:
+La build de debug da a la sala el estado de un compañero falso, como si llegara por BLE. Un teléfono sin sala entra en una sala con ese compañero. Los extras son `name`, `bpm`, `state` (`LOW`, `GOOD` o `HIGH`), `alerting`, `strap` y `leave`:
 
 ```bash
-adb -s <serie> logcat -s Alerts:D DemoBpmReceiver:D
+adb -s <serie> shell am broadcast -a com.nikashitsa.polar_alert_android.SET_PARTNER \
+  -p com.nikashitsa.polar_alert_android.fitbit --es name Ana --ei bpm 170 --es state HIGH --ez alerting true
+```
+
+El extra `lost` es una pérdida del enlace, y el estado siguiente es la vuelta:
+
+```bash
+adb -s <serie> shell am broadcast -a com.nikashitsa.polar_alert_android.SET_PARTNER \
+  -p com.nikashitsa.polar_alert_android.fitbit --ez lost true
+```
+
+Las frases del compañero suenan solo entre **Iniciar** y **Parar**.
+
+## El log
+
+Cada sonido, cada frase y cada vibración deja una línea en logcat:
+
+```bash
+adb -s <serie> logcat -s Alerts:D DemoBpmReceiver:D DemoPartnerReceiver:D RoomBle:D
 ```
 
 - La vibración viene apagada en los ajustes, y sin ella no sale la línea `vibration`.
-- El teléfono Vivo V2028 esconde las líneas de `Log.d`, porque tiene `log.tag` = `E`. Abre las dos etiquetas antes de la prueba. El ajuste dura hasta el siguiente reinicio:
+- El teléfono Vivo V2028 esconde las líneas de `Log.d`, porque tiene `log.tag` = `E`. Abre las etiquetas antes de la prueba. El ajuste dura hasta el siguiente reinicio:
 
 ```bash
 adb -s <serie> shell setprop log.tag.Alerts D
 adb -s <serie> shell setprop log.tag.DemoBpmReceiver D
+adb -s <serie> shell setprop log.tag.DemoPartnerReceiver D
+adb -s <serie> shell setprop log.tag.RoomBle D
 ```

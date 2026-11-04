@@ -50,6 +50,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.nikashitsa.polar_alert_android.lib.RoomState
+import com.nikashitsa.polar_alert_android.lib.RoomViewModel
 import com.nikashitsa.polar_alert_android.R
 import com.nikashitsa.polar_alert_android.TrackingService
 import com.nikashitsa.polar_alert_android.lib.AlertSettings
@@ -77,6 +79,7 @@ fun TrackingScreen(
     settings: SettingsViewModel = hiltViewModel(),
     sound: SoundViewModel = hiltViewModel(),
     alertsViewModel: AlertsViewModel = hiltViewModel(),
+    roomViewModel: RoomViewModel = hiltViewModel(),
     onBack: () -> Unit = {}
 ) {
     val deviceConnectionState = bluetooth.deviceConnectionState.collectAsState()
@@ -88,6 +91,7 @@ fun TrackingScreen(
     val initialDelay by settings.initialDelay.collectAsState()
     val alerts = alertsViewModel.alerts
     val alertState by alerts.state.collectAsState()
+    val roomState by roomViewModel.room.state.collectAsState()
 
     // A connectedDevice service needs BLUETOOTH_CONNECT. The demo runs without it, and without the service.
     val context = LocalContext.current
@@ -122,6 +126,7 @@ fun TrackingScreen(
         hrMax = hrMax,
         outOfRangeFor = outOfRangeFor,
         initialDelay = initialDelay,
+        partner = roomState as? RoomState.InRoom,
         onBack = onBack,
     )
 }
@@ -139,6 +144,7 @@ fun TrackingScreenContent(
     hrMax: Int = SettingsDefaults.HR_MAX,
     outOfRangeFor: Int = SettingsDefaults.OUT_OF_RANGE_FOR,
     initialDelay: Int = SettingsDefaults.INITIAL_DELAY,
+    partner: RoomState.InRoom? = null,
     onBack: () -> Unit = {}
 ) {
     Column(
@@ -163,6 +169,11 @@ fun TrackingScreenContent(
             outOfRangeFor = outOfRangeFor,
             initialDelay = initialDelay,
         )
+
+        partner?.let {
+            Spacer(modifier = Modifier.height(32.dp))
+            PartnerRow(it)
+        }
 
         Spacer(modifier = Modifier.weight(1f))
 
@@ -233,6 +244,23 @@ fun BpmView(
                 Text(stringResource(R.string.reconnecting), style = Fonts.textLg)
             }
         }
+    }
+}
+
+/** The partner of the room, small under the pulse of my runner. */
+@Composable
+fun PartnerRow(room: RoomState.InRoom) {
+    val partner = room.partner
+    val value = when {
+        !room.linked -> "--"
+        !partner.strapConnected -> stringResource(R.string.disconnected)
+        partner.bpm < 0 -> "--"
+        else -> "${partner.bpm} ${stringResource(R.string.bpm)}"
+    }
+    val color = if (room.linked && partner.trackingState != TrackingState.GOOD) Colors.Red else Colors.White
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(partner.name, style = Fonts.textLg)
+        Text(value, style = Fonts.textLgBold, color = color)
     }
 }
 

@@ -92,4 +92,22 @@
     <string name="voice_too_high">%1$s, muy alto</string>
     <string name="voice_too_low">%1$s, muy bajo</string>
     <string name="voice_good">%1$s, bien</string>
+    <string name="voice_partner_left">%1$s, fuera de la sala</string>
+    <string name="voice_partner_lost">%1$s, sin conexión</string>
+    <string name="voice_partner_back">%1$s, con conexión</string>
+    <string name="room_section">Correr en pareja</string>
+    <string name="room_create">Crear sala</string>
+    <string name="room_join">Unirse</string>
+    <string name="room_cancel">Cancelar</string>
+    <string name="room_leave">Salir de la sala</string>
+    <string name="room_code">Código</string>
+    <string name="room_waiting">Esperando al compañero</string>
+    <string name="room_searching">Buscando la sala…</string>
+    <string name="room_linked">Conectado</string>
+    <string name="room_not_found">No encuentro la sala</string>
+    <string name="room_ended">La sala terminó sin el compañero</string>
+    <string name="room_cannot_host">Este teléfono no puede crear una sala. Crea la sala en el otro teléfono</string>
+    <string name="room_error_advertise">No puedo anunciar la sala (error %1$d)</string>
+    <string name="room_error_scan">No puedo buscar la sala (error %1$d)</string>
+    <string name="room_error_server">No puedo abrir la sala (error %1$d)</string>
 </resources>

@@ -44,8 +44,8 @@ fun voiceLine(type: SoundType, language: AppLanguage): Int? {
     }
 }
 
-/** A runner without a name in Settings is "A". */
-fun spokenName(name: String): String = name.ifEmpty { "A" }
+/** A runner without a name in Settings is the letter of the room: "A", or "B" in the phone that joins. */
+fun spokenName(name: String, letter: String = RoomRole.HOST.letter): String = name.ifEmpty { letter }
 
 @Singleton
 class SoundManager @Inject constructor(
@@ -65,6 +65,9 @@ class SoundManager @Inject constructor(
     private var language: AppLanguage = AppLanguage.resolve(null)
     @Volatile
     private var name = ""
+    /** The letter of a runner without a name. The room sets it. */
+    @Volatile
+    var letter = RoomRole.HOST.letter
     @Volatile
     private var voiceReady = false
     private var voiceLocale: Locale? = null
@@ -122,8 +125,22 @@ class SoundManager @Inject constructor(
      */
     private fun speak(type: SoundType, volume: Int): Boolean {
         val line = voiceLine(type, language) ?: return false
+        return say(localizedContext.getString(line, spokenName(name, letter)), volume)
+    }
+
+    /**
+     * Says a line about the partner. Only English and Spanish have the lines, and a line without
+     * the voice says nothing: a .wav without the name sounds like an alert of my own runner.
+     */
+    fun sayPartner(@StringRes line: Int, partner: String, volume: Int) {
+        if (language != AppLanguage.ES && language != AppLanguage.EN) return
+        say(localizedContext.getString(line, partner), volume)
+    }
+
+    /** A line that comes while another sounds waits for its turn, so the runner loses no alert. */
+    private fun say(text: String, volume: Int): Boolean {
         if (!voiceReady) {
-            Log.w(TAG, "voice: the engine is not ready, $type plays the wav")
+            Log.w(TAG, "voice: the engine is not ready for \"$text\"")
             return false
         }
         // setLanguage takes about 200 ms on the main thread, so it runs only for a new language.
@@ -131,15 +148,14 @@ class SoundManager @Inject constructor(
         if (locale != voiceLocale) {
             val available = voice.setLanguage(locale)
             if (available < TextToSpeech.LANG_AVAILABLE) {
-                Log.w(TAG, "voice: no voice for ${language.tag} ($available), $type plays the wav")
+                Log.w(TAG, "voice: no voice for ${language.tag} ($available) for \"$text\"")
                 return false
             }
             voiceLocale = locale
         }
-        val text = localizedContext.getString(line, spokenName(name))
         val params = Bundle().apply { putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, volume / 100f) }
-        if (voice.speak(text, TextToSpeech.QUEUE_FLUSH, params, type.name) != TextToSpeech.SUCCESS) {
-            Log.w(TAG, "voice: speak failed, $type plays the wav")
+        if (voice.speak(text, TextToSpeech.QUEUE_ADD, params, text) != TextToSpeech.SUCCESS) {
+            Log.w(TAG, "voice: speak failed for \"$text\"")
             return false
         }
         Log.d(TAG, "voice \"$text\"")

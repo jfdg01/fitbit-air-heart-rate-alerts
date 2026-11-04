@@ -6,13 +6,15 @@ This privacy policy applies to the Heart Alert app (hereby referred to as "Appli
 
 The Application does not obtain any information when you download and use it. Registration is not required to use the Application.
 
+In a room for two runners, the Application sends your name and your heart rate by Bluetooth to the other phone of the room, once a second. The Bluetooth link has no encryption. The Application sends nothing to a server.
+
 **Does the Application collect precise real time location information of the device?**
 
 This Application does not collect precise information about the location of your mobile device.
 
 **Do third parties see and/or have access to information obtained by the Application?**
 
-Since the Application does not collect any information, no data is shared with third parties.
+Since the Application does not collect any information, no data is shared with third parties. Only the phone of a room gets your name and your heart rate.
 
 **What are my opt-out rights?**
 

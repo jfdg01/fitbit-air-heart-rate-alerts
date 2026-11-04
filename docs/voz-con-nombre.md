@@ -20,7 +20,7 @@ Solo el español y el inglés tienen las frases. Los otros idiomas de la app toc
 
 ## Un nombre vacío
 
-Un corredor sin un nombre en Ajustes es "A", y la frase dice "A, muy alto". Un teléfono tiene un solo corredor. `sala-de-pareja` (#7) decide las letras de los corredores de una sala.
+Un corredor sin un nombre en Ajustes es "A", y la frase dice "A, muy alto". Un teléfono tiene un solo corredor. En una sala, el corredor que se une es "B" (ver `sala-de-pareja.md`).
 
 Una voz en español puede leer "A" como la preposición "a". La prueba del dueño en la calle comprueba cómo suena la letra.
 

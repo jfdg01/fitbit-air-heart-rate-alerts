@@ -95,4 +95,22 @@
     <string name="voice_too_high">%1$s, too high</string>
     <string name="voice_too_low">%1$s, too low</string>
     <string name="voice_good">%1$s, good</string>
+    <string name="voice_partner_left">%1$s, left the room</string>
+    <string name="voice_partner_lost">%1$s, disconnected</string>
+    <string name="voice_partner_back">%1$s, connected</string>
+    <string name="room_section">Run as a pair</string>
+    <string name="room_create">Create room</string>
+    <string name="room_join">Join</string>
+    <string name="room_cancel">Cancel</string>
+    <string name="room_leave">Leave the room</string>
+    <string name="room_code">Code</string>
+    <string name="room_waiting">Waiting for the partner</string>
+    <string name="room_searching">Searching for the room…</string>
+    <string name="room_linked">Connected</string>
+    <string name="room_not_found">I cannot find the room</string>
+    <string name="room_ended">The room ended without the partner</string>
+    <string name="room_cannot_host">This phone cannot create a room. Create the room on the other phone</string>
+    <string name="room_error_advertise">I cannot advertise the room (error %1$d)</string>
+    <string name="room_error_scan">I cannot search for the room (error %1$d)</string>
+    <string name="room_error_server">I cannot open the room (error %1$d)</string>
 </resources>
