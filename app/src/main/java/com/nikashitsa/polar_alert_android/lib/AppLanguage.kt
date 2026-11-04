@@ -49,8 +49,10 @@ enum class AppLanguage(val tag: String, val code: String, val displayName: Strin
         /**
          * Sorted by name, the order the language menu lists them in. A collator rather than
          * plain string order, so "Čeština" sorts under C instead of after every Latin name.
+         * Lazy, because a JVM unit test has no android.icu, and the enum must load there.
          */
-        val sorted: List<AppLanguage> = Collator.getInstance(Locale.ROOT).let { collator ->
+        val sorted: List<AppLanguage> by lazy {
+            val collator = Collator.getInstance(Locale.ROOT)
             entries.sortedWith { a, b -> collator.compare(a.displayName, b.displayName) }
         }
 

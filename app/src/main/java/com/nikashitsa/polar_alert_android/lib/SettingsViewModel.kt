@@ -20,6 +20,8 @@ class SettingsViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
 ): ViewModel() {
 
+    private val _name = MutableStateFlow("")
+    val name: StateFlow<String> = _name
     private val _volume = MutableStateFlow<Int>(SettingsDefaults.VOLUME)
     val volume: StateFlow<Int> = _volume
     private val _hrMin = MutableStateFlow<Int>(SettingsDefaults.HR_MIN)
@@ -79,6 +81,7 @@ class SettingsViewModel @Inject constructor(
                 }
             }
         }
+        observe(repository.nameFlow, _name)
         observe(repository.volumeFlow, _volume)
         observe(repository.hrMinFlow, _hrMin)
         observe(repository.hrMaxFlow, _hrMax)
@@ -89,6 +92,7 @@ class SettingsViewModel @Inject constructor(
         observe(repository.languageFlow.map(AppLanguage::resolve), _language)
     }
 
+    fun setName(value: String) = update { repository.setName(value) }
     fun setVolume(value: Int) = update { repository.setVolume(value) }
     // Each limit pushes the other one, so 120-140 can become 150-170 in any order.
     fun setHrMin(value: Int) = update {

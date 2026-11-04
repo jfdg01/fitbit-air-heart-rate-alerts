@@ -53,6 +53,7 @@ import com.nikashitsa.polar_alert_android.ui.components.AppSwitch
 import com.nikashitsa.polar_alert_android.ui.components.DevicePicker
 import com.nikashitsa.polar_alert_android.ui.components.DropdownMenuSelector
 import com.nikashitsa.polar_alert_android.ui.components.LanguageSelector
+import com.nikashitsa.polar_alert_android.ui.components.NameField
 import com.nikashitsa.polar_alert_android.ui.components.NumberField
 
 @Composable
@@ -65,6 +66,7 @@ fun SettingsScreen(
 ) {
     val deviceName = bluetooth.deviceName.collectAsState()
     val batteryStatusFeature = bluetooth.batteryStatusFeature.collectAsState()
+    val name by settings.name.collectAsState()
     val volume by settings.volume.collectAsState()
     val vibrate by settings.vibrate.collectAsState()
     val hrMin by settings.hrMin.collectAsState()
@@ -96,6 +98,8 @@ fun SettingsScreen(
     SettingsScreenContent(
         deviceName = deviceName.value,
         batteryStatusFeature = batteryStatusFeature.value,
+        name = name,
+        setName = settings::setName,
         volume = volume,
         setVolume = settings::setVolume,
         vibrate = vibrate,
@@ -134,6 +138,8 @@ fun SettingsScreen(
 fun SettingsScreenContent(
     deviceName: String = "HRM BELT",
     batteryStatusFeature: BatteryStatusFeature = BatteryStatusFeature(true),
+    name: String = "",
+    setName: (String) -> Unit = {},
     volume: Int = SettingsDefaults.VOLUME,
     setVolume: (Int) -> Unit = {},
     vibrate: Boolean = SettingsDefaults.VIBRATE,
@@ -181,6 +187,12 @@ fun SettingsScreenContent(
             Text(text = stringResource(R.string.settings), style = Fonts.textXlBold)
             Spacer(modifier = Modifier.weight(1f))
             LanguageSelector(value = language, setValue = setLanguage)
+        }
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        SettingRow(label = stringResource(R.string.runner_name)) {
+            NameField(name, setName)
         }
 
         Spacer(modifier = Modifier.height(40.dp))

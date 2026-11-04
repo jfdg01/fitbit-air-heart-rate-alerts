@@ -18,6 +18,10 @@
     <queries>
         <package android:name="com.fitbit.FitbitMobile" />
         <package android:name="com.google.android.apps.healthdata" />
+        <!-- The zone alerts say the runner's name with the TextToSpeech engine of the phone. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
     </queries>
 
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true"/>

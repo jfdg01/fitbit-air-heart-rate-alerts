@@ -47,6 +47,9 @@ object SettingsOptions {
     val ALERT_INTERVAL = listOf(1, 3, 5, 10)
     val OUT_OF_RANGE_FOR = listOf(0, 5, 10, 30, 60, 300, 600)
     val INITIAL_DELAY = listOf(0, UNTIL_IN_RANGE, 60, 300, 600, 900)
+
+    // A long name makes a slow line for the voice.
+    const val NAME_MAX = 10
 }
 
 object SettingsKeys {
@@ -58,6 +61,7 @@ object SettingsKeys {
     val outOfRangeFor = intPreferencesKey("outOfRangeFor")
     val initialDelay = intPreferencesKey("initialDelay")
     val language = stringPreferencesKey("language")
+    val name = stringPreferencesKey("name")
     val zone = intPreferencesKey("zone")
     val age = intPreferencesKey("age")
     val restingHr = intPreferencesKey("restingHr")
@@ -71,6 +75,10 @@ class SettingsRepository @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) {
     private val dataStore: DataStore<Preferences> = context.dataStore
+
+    /** The runner's name, which the voice says in the zone alerts. Empty until the user types one. */
+    val nameFlow: Flow<String> = get(SettingsKeys.name, "")
+    suspend fun setName(value: String) = set(SettingsKeys.name, value.trim().take(SettingsOptions.NAME_MAX).trimEnd())
 
     val volumeFlow: Flow<Int> = get(SettingsKeys.volume, SettingsDefaults.VOLUME)
     suspend fun setVolume(value: Int) = set(SettingsKeys.volume, value.coerceIn(0, 100))

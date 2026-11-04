@@ -90,4 +90,9 @@
     <string name="zones_override">Type a value to replace it. Delete it to use the automatic value again.</string>
     <string name="zones_warning">The zones are an estimate. With a heart problem or medication, ask your doctor before you use them.</string>
     <string name="zones_help">Zones help</string>
+    <string name="runner_name">Name</string>
+    <!-- The voice says these lines. Only English and Spanish have them, see voiceLine(). -->
+    <string name="voice_too_high">%1$s, too high</string>
+    <string name="voice_too_low">%1$s, too low</string>
+    <string name="voice_good">%1$s, good</string>
 </resources>
